@@ -26,6 +26,22 @@ public class CustomerController {
         return ResponseEntity.ok(customerService.createCustomer(request));
     }
 
+    @GetMapping(value = "/{id}", produces = "application/json")
+    public ResponseEntity<CustomerDTO> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(customerService.getCustomerById(id));
+    }
+
+    @PutMapping(value = "/{id}", consumes = "application/json", produces = "application/json")
+    public ResponseEntity<CustomerDTO> update(@PathVariable Long id, @Valid @RequestBody CustomerDTO request) {
+        return ResponseEntity.ok(customerService.updateCustomer(id, request));
+    }
+
+    @DeleteMapping(value = "/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        customerService.deleteCustomer(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping(produces = "application/json")
     public ResponseEntity<List<CustomerDTO>> searchAll(
             @PageableDefault(page = 0, size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {

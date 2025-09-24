@@ -3,6 +3,7 @@ package com.ancora.customerbookshelf.service;
 import com.ancora.customerbookshelf.dto.CustomerDTO;
 import com.ancora.customerbookshelf.exception.ConflictException;
 import com.ancora.customerbookshelf.exception.NoContentException;
+import com.ancora.customerbookshelf.exception.ResourceNotFoundException;
 import com.ancora.customerbookshelf.mapper.CustomerMapper;
 import com.ancora.customerbookshelf.model.Customer;
 import com.ancora.customerbookshelf.repository.CustomerRepository;
@@ -26,12 +27,58 @@ public class CustomerService {
         if (customerRepository.findByEmail(emailNormalized).isPresent()) {
             throw new ConflictException("Email already registered");
         }
+        customerRepository.findByCpf(customerDTO.getCpf()).ifPresent(c -> {
+            throw new ConflictException("CPF already registered");
+        });
 
         Customer customer = CustomerMapper.toEntity(customerDTO);
-        customerRepository.save(customer);
-        return customerDTO;
+        Customer savedCustomer = customerRepository.save(customer);
+        return CustomerMapper.ToDTO(savedCustomer);
     }
 
+    public CustomerDTO getCustomerById(Long id) {
+        return customerRepository.findById(id)
+                .map(CustomerMapper::ToDTO)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
+    }
+
+    @Transactional
+    public CustomerDTO updateCustomer(Long id, @Valid CustomerDTO customerDTO) {
+        Customer customer = customerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
+
+        String emailNormalized = customerDTO.getEmail().trim().toLowerCase();
+        customerRepository.findByEmail(emailNormalized).ifPresent(existingCustomer -> {
+            if (!existingCustomer.getId().equals(id)) {
+                throw new ConflictException("Email already registered");
+            }
+        });
+
+        customerRepository.findByCpf(customerDTO.getCpf()).ifPresent(existingCustomer -> {
+            if (!existingCustomer.getId().equals(id)) {
+                throw new ConflictException("CPF already registered");
+            }
+        });
+
+        Customer updatedCustomerData = Customer.builder()
+                .id(customer.getId())
+                .name(customerDTO.getName())
+                .email(emailNormalized)
+                .cpf(customerDTO.getCpf())
+                .createdAt(customer.getCreatedAt())
+                .build();
+
+        Customer updatedCustomer = customerRepository.save(updatedCustomerData);
+        return CustomerMapper.ToDTO(updatedCustomer);
+    }
+
+    @Transactional
+    public void deleteCustomer(Long id) {
+        if (!customerRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Customer not found with id: " + id);
+        }
+        customerRepository.deleteById(id);
+    }
 
     public Page<CustomerDTO> getAllCustomers(Pageable pageable) {
         Page<Customer> page = customerRepository.findAll(pageable);
