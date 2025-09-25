@@ -1,0 +1,10 @@
+.git
+.idea
+.gitignore
+target/
+logs/
+*.log
+.mvn/
+mvnw
+mvnw.cmd
+*.postman_collection.json
