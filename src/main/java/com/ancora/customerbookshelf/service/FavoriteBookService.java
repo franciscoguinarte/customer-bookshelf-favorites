@@ -12,35 +12,43 @@ import com.ancora.customerbookshelf.model.Dimensions;
 import com.ancora.customerbookshelf.repository.BookRepository;
 import com.ancora.customerbookshelf.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class FavoriteBookService {
 
+    private static final Logger log = LoggerFactory.getLogger(FavoriteBookService.class);
+
     private final CustomerRepository customerRepository;
     private final BookRepository bookRepository;
     private final RestTemplate restTemplate;
 
-    @Value("${brasilapi.url}")
+    @org.springframework.beans.factory.annotation.Value("${brasilapi.url}")
     private String brasilApiUrl;
 
     @Transactional(readOnly = true)
-    public Set<BookDTO> getFavoriteBooks(Long customerId) {
-        Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + customerId));
-
-        return customer.getFavoriteBooks().stream()
-                .map(BookMapper::toDTO)
-                .collect(Collectors.toSet());
+    public Page<BookDTO> getFavoriteBooks(Long customerId, Pageable pageable) {
+        if (!customerRepository.existsById(customerId)) {
+            throw new ResourceNotFoundException("Customer not found with id: " + customerId);
+        }
+        Page<Book> bookPage = bookRepository.findFavoritesByCustomerId(customerId, pageable);
+        return bookPage.map(BookMapper::toDTO);
     }
 
     @Transactional(readOnly = true)
@@ -87,6 +95,9 @@ public class FavoriteBookService {
 
     private Book fetchAndSaveBook(String isbn) {
         BookResponseDTO responseDTO = fetchBookFromBrasilApi(isbn);
+        if (responseDTO == null) {
+            throw new ExternalBookNotFoundException("Failed to fetch book data for ISBN " + isbn + " from external API after multiple retries.");
+        }
 
         Dimensions dimensions = Optional.ofNullable(responseDTO.getDimensions())
                 .map(d -> Dimensions.builder().width(d.getWidth()).height(d.getHeight()).unit(d.getUnit()).build())
@@ -113,14 +124,37 @@ public class FavoriteBookService {
         return bookRepository.save(newBook);
     }
 
-    private BookResponseDTO fetchBookFromBrasilApi(String isbn) {
+    /**
+     * Anotação que define este método como "tentável novamente".
+     * value = As exceções que, se lançadas, disparam a lógica de retentativa.
+     * maxAttempts = O número máximo de tentativas (a primeira + 2 retentativas).
+     * backoff = Define um tempo de espera entre as tentativas (neste caso, 2 segundos).
+     */
+    @Retryable(
+            value = {ResourceAccessException.class, HttpServerErrorException.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 2000)
+    )
+    @Cacheable("booksByIsbn")
+    public BookResponseDTO fetchBookFromBrasilApi(String isbn) {
         try {
             String url = brasilApiUrl + isbn;
+            log.info("Fetching book with ISBN {} from URL: {}", isbn, url);
             return restTemplate.getForObject(url, BookResponseDTO.class);
         } catch (HttpClientErrorException.NotFound ex) {
+            // Esta exceção (404) não dispara a retentativa, pois significa que o livro não existe, então não adianta tentar de novo.
             throw new ExternalBookNotFoundException("Book with ISBN " + isbn + " not found in external API.");
-        } catch (Exception ex) {
-            throw new RuntimeException("Failed to fetch book data from external API.", ex);
         }
+    }
+
+    /**
+     * Método de recuperação. É chamado pelo Spring quando o método anotado com @Retryable falha em todas as suas tentativas.
+     * A assinatura deve ser a mesma do método original, com a exceção que causou a falha como primeiro parâmetro.
+     */
+    @Recover
+    private BookResponseDTO recoverFromApiFailure(Exception ex, String isbn) {
+        log.error("All retry attempts failed for ISBN {}. Error: {}", isbn, ex.getMessage());
+        // Retornar nulo é uma forma de sinalizar para o método que o chamou (fetchAndSaveBook) que a operação falhou permanentemente.
+        return null;
     }
 }

@@ -1,26 +1,21 @@
 package com.ancora.customerbookshelf.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
 import lombok.Data;
 
-import java.util.List;
-
 @Data
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class BookDTO {
     private String isbn;
     private String title;
     private String subtitle;
-    private List<String> authors;
+    private String author;
     private String publisher;
-    private String synopsis;
-    private DimensionsDTO dimensions;
     private Integer year;
     private String format;
     private Integer pageCount;
-    private List<String> subjects;
-    private String location;
+    private String subject;
     private Double retailPrice;
-    private String coverUrl;
-    private String provider;
 }

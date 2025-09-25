@@ -13,30 +13,20 @@ public class BookMapper {
             return null;
         }
 
-        DimensionsDTO dimensionsDTO = Optional.ofNullable(book.getDimensions())
-                .map(d -> DimensionsDTO.builder()
-                        .width(d.getWidth())
-                        .height(d.getHeight())
-                        .unit(d.getUnit())
-                        .build())
-                .orElse(null);
+        String author = (book.getAuthors() != null && !book.getAuthors().isEmpty()) ? book.getAuthors().get(0) : null;
+        String subject = (book.getSubjects() != null && !book.getSubjects().isEmpty()) ? book.getSubjects().get(0) : null;
 
         return BookDTO.builder()
                 .isbn(book.getIsbn())
                 .title(book.getTitle())
                 .subtitle(book.getSubtitle())
-                .authors(book.getAuthors())
+                .author(author)
                 .publisher(book.getPublisher())
-                .synopsis(book.getSynopsis())
-                .dimensions(dimensionsDTO)
                 .year(book.getYear())
                 .format(book.getFormat())
                 .pageCount(book.getPageCount())
-                .subjects(book.getSubjects())
-                .location(book.getLocation())
+                .subject(subject)
                 .retailPrice(book.getRetailPrice())
-                .coverUrl(book.getCoverUrl())
-                .provider(book.getProvider())
                 .build();
     }
 }

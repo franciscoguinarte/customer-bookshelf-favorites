@@ -14,5 +14,7 @@ public class CustomerDTO {
     private String email;
     @CPF
     private String cpf;
+    private java.time.LocalDateTime createdAt;
+    private FavoritesSummaryDTO favoritesSummary;
 
 }

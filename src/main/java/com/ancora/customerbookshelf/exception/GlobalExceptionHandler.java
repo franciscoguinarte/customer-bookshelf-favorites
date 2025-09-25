@@ -3,12 +3,16 @@ package com.ancora.customerbookshelf.exception;
 
 import com.ancora.customerbookshelf.dto.ErrorPayload;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -18,6 +22,21 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ErrorPayload> handleNoHandlerFound(NoHandlerFoundException ex, HttpServletRequest request) {
+        log.warn("No handler found for request {}: {}", request.getRequestURI(), ex.getMessage());
+        ErrorPayload payload = ErrorPayload.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.NOT_FOUND.value())
+                .error(HttpStatus.NOT_FOUND.getReasonPhrase())
+                .message("Endpoint not found: " + request.getRequestURI())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(payload);
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorPayload> handleValidationExceptions(
@@ -32,6 +51,8 @@ public class GlobalExceptionHandler {
                     return detail;
                 })
                 .collect(Collectors.toList());
+
+        log.error("Validation error for request {}: {}", request.getRequestURI(), errorDetails);
 
         ErrorPayload payload = ErrorPayload.builder()
                 .timestamp(Instant.now())
@@ -50,6 +71,7 @@ public class GlobalExceptionHandler {
             ConflictException ex,
             HttpServletRequest request
     ) {
+        log.error("ConflictException on request {}: {}", request.getRequestURI(), ex.getMessage());
         ErrorPayload payload = ErrorPayload.builder()
                 .timestamp(Instant.now())
                 .status(HttpStatus.CONFLICT.value())
@@ -66,6 +88,7 @@ public class GlobalExceptionHandler {
             NoContentException ex,
             HttpServletRequest request
     ) {
+        log.info("NoContentException on request {}: {}", request.getRequestURI(), ex.getMessage());
         ErrorPayload payload = ErrorPayload.builder()
                 .timestamp(Instant.now())
                 .status(HttpStatus.NO_CONTENT.value())
@@ -82,6 +105,7 @@ public class GlobalExceptionHandler {
             ResourceNotFoundException ex,
             HttpServletRequest request
     ) {
+        log.error("ResourceNotFoundException on request {}: {}", request.getRequestURI(), ex.getMessage());
         ErrorPayload payload = ErrorPayload.builder()
                 .timestamp(Instant.now())
                 .status(HttpStatus.NOT_FOUND.value())
@@ -93,15 +117,41 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(payload);
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorPayload> handleGeneric(
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorPayload> handleDataIntegrity(
+            DataIntegrityViolationException ex,
             HttpServletRequest request
     ) {
+        String message = "Data integrity violation. A unique constraint might have been violated.";
+        if (ex.getMessage().toLowerCase().contains("cpf")) {
+            message = "A customer with this CPF already exists.";
+        } else if (ex.getMessage().toLowerCase().contains("email")) {
+            message = "A customer with this email already exists.";
+        }
+        log.error("DataIntegrityViolationException on request {}: {}", request.getRequestURI(), message, ex);
+
+        ErrorPayload payload = ErrorPayload.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error(HttpStatus.CONFLICT.getReasonPhrase())
+                .message(message)
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(payload);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorPayload> handleGeneric(
+            Exception ex,
+            HttpServletRequest request
+    ) {
+        log.error("Unexpected generic Exception on request {}: {}", request.getRequestURI(), ex.getMessage(), ex);
         ErrorPayload payload = ErrorPayload.builder()
                 .timestamp(Instant.now())
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
-                .message("Unexpected error occurred")
+                .message("An unexpected internal error occurred.")
                 .path(request.getRequestURI())
                 .build();
 
