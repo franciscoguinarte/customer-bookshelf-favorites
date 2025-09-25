@@ -3,6 +3,7 @@ package com.ancora.customerbookshelf.exception;
 
 import com.ancora.customerbookshelf.dto.ErrorPayload;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -21,9 +22,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
-
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<ErrorPayload> handleNoHandlerFound(NoHandlerFoundException ex, HttpServletRequest request) {

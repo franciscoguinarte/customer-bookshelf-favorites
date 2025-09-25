@@ -6,8 +6,6 @@ import com.ancora.customerbookshelf.service.AsyncBookProcessorService;
 import com.ancora.customerbookshelf.service.FavoriteBookService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -25,11 +23,6 @@ public class FavoriteBookController {
     private final FavoriteBookService favoriteBookService;
     private final AsyncBookProcessorService asyncBookProcessorService;
 
-    /**
-     * Endpoint para adição de múltiplos livros. Ele recebe a lista de ISBNs e dispara o serviço assíncrono.
-     * @return Retorna o status HTTP 202 (Accepted), informando ao cliente que a requisição foi aceita
-     * e está sendo processada em segundo plano, sem que ele precise esperar pela conclusão.
-     */
     @PostMapping("/bulk-add")
     public ResponseEntity<Void> bulkAddBooks(@PathVariable Long customerId, @RequestBody BulkAddRequestDTO request) {
         log.info("Received bulk add request for customer {} with {} books", customerId, request.getIsbns().size());

@@ -12,8 +12,7 @@ import com.ancora.customerbookshelf.model.Dimensions;
 import com.ancora.customerbookshelf.repository.BookRepository;
 import com.ancora.customerbookshelf.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,9 +30,9 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class FavoriteBookService {
 
-    private static final Logger log = LoggerFactory.getLogger(FavoriteBookService.class);
 
     private final CustomerRepository customerRepository;
     private final BookRepository bookRepository;
