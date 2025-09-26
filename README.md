@@ -68,7 +68,7 @@ Este método garante um ambiente de execução consistente e isolado.
         ```
 
     -   **Para Linux ou macOS:**
-        *Pode ser necessário dar permissão de execução ao script primeiro: `chmod +x build-and-run.sh`*
+        *Pode ser necessário dar permissão de execução ao script primeiro: `chmod +x build-and-run.sh`* e `chmod +x mvnw`*
         ```bash
         ./build-and-run.sh
         ```
