@@ -1,41 +1,35 @@
 version: '3.8'
 
 services:
-  # Serviço do Banco de Dados MySQL
   db:
     image: mysql:8.0
     container_name: mysql-db
     ports:
       - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: root # Senha do usuário root do MySQL
-      MYSQL_DATABASE: customer # Nome do banco de dados a ser criado
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: customer
     volumes:
-      - mysql-data:/var/lib/mysql # Usa um volume para persistir os dados do banco
+      - mysql-data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Serviço da Aplicação Spring Boot
   app:
     container_name: customer-bookshelf-app
-    # Constrói a imagem a partir do Dockerfile no diretório atual
     build: .
     ports:
       - "8080:8080"
-    # Define as variáveis de ambiente para a aplicação Spring Boot
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/customer?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
-      # Garante que o JPA espere o banco estar pronto
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
     depends_on:
       db:
-        condition: service_healthy # Garante que o serviço 'app' só inicie DEPOIS que o healthcheck do 'db' passar
+        condition: service_healthy
 
-# Define o volume nomeado para persistência dos dados do MySQL
 volumes:
   mysql-data:
