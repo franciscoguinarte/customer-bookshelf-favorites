@@ -52,14 +52,33 @@ Existem duas maneiras de executar o projeto: usando Docker (recomendado) ou loca
 
 ### 1. Usando Docker (Recomendado)
 
+Este método garante um ambiente de execução consistente e isolado.
+
 **Pré-requisitos:**
+- JDK 17 e Maven 3.8+ (necessário para o script de build)
 - Docker & Docker Compose
 
 **Passos:**
 
-1.  Na raiz do projeto, execute: `docker-compose up --build`
-2.  A API estará disponível em `http://localhost:8080`.
-3.  Para visualizar os logs da aplicação, execute em outro terminal: `docker-compose logs -f app`
+1.  **Execute o script de automação:** Na raiz do projeto, execute o script correspondente ao seu sistema operacional.
+
+    -   **Para Windows (CMD ou PowerShell):**
+        ```bash
+        .\build-and-run.bat
+        ```
+
+    -   **Para Linux ou macOS:**
+        *Pode ser necessário dar permissão de execução ao script primeiro: `chmod +x build-and-run.sh`*
+        ```bash
+        ./build-and-run.sh
+        ```
+
+2.  O script irá automaticamente construir o projeto com Maven e, em seguida, iniciar os contêineres do Docker. A API estará disponível em `http://localhost:8080`.
+
+3.  **Para visualizar os logs** da aplicação em tempo real, abra outro terminal e execute:
+    ```bash
+    docker-compose logs -f app
+    ```
 
 ### 2. Localmente (Sem Docker)
 

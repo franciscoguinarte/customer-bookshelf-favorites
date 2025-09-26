@@ -12,6 +12,11 @@ services:
       MYSQL_DATABASE: customer
     volumes:
       - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   app:
     container_name: customer-bookshelf-app
@@ -24,7 +29,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: root
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
 volumes:
   mysql-data:
