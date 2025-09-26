@@ -18,19 +18,24 @@ services:
       timeout: 5s
       retries: 5
 
+  # Serviço da Aplicação Spring Boot
   app:
     container_name: customer-bookshelf-app
+    # Constrói a imagem a partir do Dockerfile no diretório atual
     build: .
-    ports:
-      - "8080:8080"
+    # No modo host, o contêiner compartilha a rede do host. Mapeamentos de porta são ignorados.
+    network_mode: "host"
+    # Define as variáveis de ambiente para a aplicação Spring Boot
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/customer?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      # Como a app está na rede do host, ela se conecta ao DB via localhost.
+      SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/customer?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      # Garante que o JPA espere o banco estar pronto
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
     depends_on:
       db:
-        condition: service_healthy
+        condition: service_healthy # Garante que o serviço 'app' só inicie DEPOIS que o healthcheck do 'db' passar
 
 volumes:
   mysql-data:
